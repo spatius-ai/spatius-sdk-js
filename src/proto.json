@@ -1,0 +1,292 @@
+{
+  "nested": {
+    "message": {
+      "options": {
+        "py_generic_services": true
+      },
+      "nested": {
+        "MessageType": {
+          "values": {
+            "MESSAGE_UNSPECIFIED": 0,
+            "MESSAGE_CLIENT_CONFIGURE_SESSION": 1,
+            "MESSAGE_SERVER_CONFIRM_SESSION": 2,
+            "MESSAGE_CLIENT_AUDIO_INPUT": 3,
+            "MESSAGE_SERVER_ERROR": 4,
+            "MESSAGE_SERVER_RESPONSE_ANIMATION": 5,
+            "MESSAGE_CLIENT_INTERRUPT": 7
+          }
+        },
+        "AudioFormat": {
+          "values": {
+            "AUDIO_FORMAT_PCM_S16LE": 0,
+            "AUDIO_FORMAT_OGG_OPUS": 1
+          }
+        },
+        "TransportCompression": {
+          "values": {
+            "TRANSPORT_COMPRESSION_NONE": 0
+          }
+        },
+        "EgressType": {
+          "values": {
+            "EGRESS_TYPE_UNSPECIFIED": 0,
+            "EGRESS_TYPE_LIVEKIT": 1,
+            "EGRESS_TYPE_AGORA": 2
+          }
+        },
+        "LiveKitEgressConfig": {
+          "fields": {
+            "url": {
+              "type": "string",
+              "id": 1
+            },
+            "apiKey": {
+              "type": "string",
+              "id": 2,
+              "protoName": "api_key"
+            },
+            "apiSecret": {
+              "type": "string",
+              "id": 3,
+              "protoName": "api_secret"
+            },
+            "roomName": {
+              "type": "string",
+              "id": 4,
+              "protoName": "room_name"
+            },
+            "publisherId": {
+              "type": "string",
+              "id": 5,
+              "protoName": "publisher_id"
+            },
+            "extraAttributes": {
+              "keyType": "string",
+              "type": "string",
+              "id": 6,
+              "protoName": "extra_attributes"
+            },
+            "idleTimeout": {
+              "type": "int32",
+              "id": 7,
+              "protoName": "idle_timeout"
+            },
+            "apiToken": {
+              "type": "string",
+              "id": 8,
+              "protoName": "api_token"
+            }
+          }
+        },
+        "AgoraEgressConfig": {
+          "fields": {
+            "channelName": {
+              "type": "string",
+              "id": 1,
+              "protoName": "channel_name"
+            },
+            "token": {
+              "type": "string",
+              "id": 2
+            },
+            "uid": {
+              "type": "uint32",
+              "id": 3
+            },
+            "publisherId": {
+              "type": "string",
+              "id": 4,
+              "protoName": "publisher_id"
+            }
+          }
+        },
+        "ClientConfigureSession": {
+          "fields": {
+            "sampleRate": {
+              "type": "int32",
+              "id": 1,
+              "protoName": "sample_rate"
+            },
+            "bitrate": {
+              "type": "int32",
+              "id": 2
+            },
+            "audioFormat": {
+              "type": "AudioFormat",
+              "id": 3,
+              "protoName": "audio_format"
+            },
+            "transportCompression": {
+              "type": "TransportCompression",
+              "id": 4,
+              "protoName": "transport_compression"
+            },
+            "egressType": {
+              "type": "EgressType",
+              "id": 5,
+              "protoName": "egress_type"
+            },
+            "livekitEgress": {
+              "type": "LiveKitEgressConfig",
+              "id": 6,
+              "protoName": "livekit_egress"
+            },
+            "agoraEgress": {
+              "type": "AgoraEgressConfig",
+              "id": 7,
+              "protoName": "agora_egress"
+            },
+            "extraParams": {
+              "keyType": "string",
+              "type": "string",
+              "id": 8,
+              "protoName": "extra_params"
+            }
+          }
+        },
+        "ServerConfirmSession": {
+          "fields": {
+            "connectionId": {
+              "type": "string",
+              "id": 1,
+              "protoName": "connection_id"
+            }
+          }
+        },
+        "TraceContext": {
+          "fields": {
+            "traceparent": {
+              "type": "string",
+              "id": 1
+            },
+            "tracestate": {
+              "type": "string",
+              "id": 2
+            }
+          }
+        },
+        "ClientAudioInput": {
+          "fields": {
+            "reqId": {
+              "type": "string",
+              "id": 1,
+              "protoName": "req_id"
+            },
+            "end": {
+              "type": "bool",
+              "id": 2
+            },
+            "audio": {
+              "type": "bytes",
+              "id": 3
+            },
+            "traceContext": {
+              "type": "TraceContext",
+              "id": 4,
+              "protoName": "trace_context"
+            }
+          }
+        },
+        "ServerError": {
+          "fields": {
+            "connectionId": {
+              "type": "string",
+              "id": 1,
+              "protoName": "connection_id"
+            },
+            "reqId": {
+              "type": "string",
+              "id": 2,
+              "protoName": "req_id"
+            },
+            "code": {
+              "type": "int32",
+              "id": 3
+            },
+            "message": {
+              "type": "string",
+              "id": 4
+            }
+          }
+        },
+        "ServerResponseAnimation": {
+          "fields": {
+            "connectionId": {
+              "type": "string",
+              "id": 1,
+              "protoName": "connection_id"
+            },
+            "reqId": {
+              "type": "string",
+              "id": 2,
+              "protoName": "req_id"
+            },
+            "end": {
+              "type": "bool",
+              "id": 3
+            }
+          }
+        },
+        "ClientInterrupt": {
+          "fields": {
+            "reqId": {
+              "type": "string",
+              "id": 1,
+              "protoName": "req_id"
+            }
+          }
+        },
+        "Message": {
+          "oneofs": {
+            "data": {
+              "oneof": [
+                "clientConfigureSession",
+                "serverConfirmSession",
+                "clientAudioInput",
+                "serverError",
+                "serverResponseAnimation",
+                "clientInterrupt"
+              ]
+            }
+          },
+          "fields": {
+            "type": {
+              "type": "MessageType",
+              "id": 1
+            },
+            "clientConfigureSession": {
+              "type": "ClientConfigureSession",
+              "id": 2,
+              "protoName": "client_configure_session"
+            },
+            "serverConfirmSession": {
+              "type": "ServerConfirmSession",
+              "id": 3,
+              "protoName": "server_confirm_session"
+            },
+            "clientAudioInput": {
+              "type": "ClientAudioInput",
+              "id": 4,
+              "protoName": "client_audio_input"
+            },
+            "serverError": {
+              "type": "ServerError",
+              "id": 5,
+              "protoName": "server_error"
+            },
+            "serverResponseAnimation": {
+              "type": "ServerResponseAnimation",
+              "id": 6,
+              "protoName": "server_response_animation"
+            },
+            "clientInterrupt": {
+              "type": "ClientInterrupt",
+              "id": 8,
+              "protoName": "client_interrupt"
+            }
+          }
+        }
+      }
+    }
+  }
+}

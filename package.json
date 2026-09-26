@@ -1,0 +1,78 @@
+{
+  "name": "@spatius/server-sdk",
+  "version": "0.1.0",
+  "description": "Spatius Node.js server SDK for streaming audio to avatar sessions",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "proto/message.proto"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spatius-ai/spatius-sdk-js.git"
+  },
+  "homepage": "https://github.com/spatius-ai/spatius-sdk-js#readme",
+  "bugs": {
+    "url": "https://github.com/spatius-ai/spatius-sdk-js/issues"
+  },
+  "keywords": [
+    "spatius",
+    "avatar",
+    "websocket",
+    "audio",
+    "server-sdk"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "test:package": "npm run build && node tests/package.mjs",
+    "check": "npm run typecheck && npm test && npm run build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "proto:generate": "pbjs -t json proto/message.proto -o src/proto.json",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/core": "^2.11.0",
+    "@opentelemetry/otlp-transformer": "0.222.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-metrics": "^2.11.0",
+    "@opentelemetry/sdk-trace-base": "^2.11.0",
+    "protobufjs": "^8.8.0",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "@types/ws": "^8.18.1",
+    "nock": "^14.0.17",
+    "prettier": "^3.9.9",
+    "protobufjs-cli": "^2.7.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3"
+  }
+}
