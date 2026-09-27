@@ -9,7 +9,7 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
-import { devNull, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -35,7 +35,8 @@ async function temporary(t) {
 }
 const gitEnv = {
   ...process.env,
-  GIT_CONFIG_GLOBAL: devNull,
+  // Git for Windows recognizes /dev/null, not Node's Win32 \\.\nul device path.
+  GIT_CONFIG_GLOBAL: "/dev/null",
   GIT_CONFIG_NOSYSTEM: "1",
 };
 function gitAt(root) {
