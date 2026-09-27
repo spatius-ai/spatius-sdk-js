@@ -1,0 +1,105 @@
+name: Publish npm package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-release
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Validate and build release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      dist_tag: ${{ steps.release.outputs.dist_tag }}
+      artifact_id: ${{ steps.artifact.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Validate release and set version from tag
+        id: release
+        run: node scripts/prepare-release.mjs
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: npm run format:check
+      - run: npm run check
+        env:
+          REQUIRE_FFMPEG: "1"
+      - run: npm run proto:generate
+      - run: git diff --exit-code -- src/proto.json
+      - name: Pack and test the exact release artifact
+        run: npm run test:package -- --artifact-dir "$RUNNER_TEMP/release"
+      - name: Preserve validated npm artifact
+        id: artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: npm-release-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/release/*.tgz
+            ${{ runner.temp }}/release/release-artifact.json
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish with npm trusted publishing
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      # Recheck on job reruns; never retry publishing an existing npm version.
+      - name: Recheck release eligibility
+        run: node scripts/prepare-release.mjs
+      - uses: actions/download-artifact@v7
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact_id }}
+          path: ${{ runner.temp }}/release
+          merge-multiple: true
+      - name: Verify artifact integrity and version
+        id: artifact
+        run: node scripts/verify-release-artifact.mjs "$RUNNER_TEMP/release" "$RELEASE_VERSION"
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+      # No install, build, lifecycle scripts, or long-lived npm token in this job.
+      - name: Publish the tested tarball with provenance
+        run: npm publish "$RELEASE_TARBALL" --ignore-scripts --tag "$NPM_DIST_TAG" --access public --provenance
+        env:
+          RELEASE_TARBALL: ${{ steps.artifact.outputs.tarball }}
+          NPM_DIST_TAG: ${{ needs.build.outputs.dist_tag }}
+      - name: Report release
+        run: echo "Published @spatius/server-sdk@$RELEASE_VERSION to npm tag $NPM_DIST_TAG." >> "$GITHUB_STEP_SUMMARY"
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+          NPM_DIST_TAG: ${{ needs.build.outputs.dist_tag }}
+      - name: Report publication failure
+        if: failure()
+        run: echo "Check npm for @spatius/server-sdk@$RELEASE_VERSION before retrying. A failed job does not prove publication failed; no automatic retry was attempted." >> "$GITHUB_STEP_SUMMARY"
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
