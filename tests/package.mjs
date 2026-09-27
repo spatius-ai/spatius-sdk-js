@@ -1,11 +1,25 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { integrity, verifyArtifact } from "../scripts/release.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
+const [flag, destination] = process.argv.slice(2);
+if (
+  process.argv.length > 2 &&
+  (flag !== "--artifact-dir" || !destination || process.argv.length !== 4)
+)
+  throw new Error("Usage: package.mjs [--artifact-dir <directory>]");
 const temp = mkdtempSync(join(tmpdir(), "spatius-package-"));
 const npm = (args, cwd) =>
   execFileSync(process.execPath, [process.env.npm_execpath, ...args], {
@@ -21,6 +35,10 @@ try {
     ),
   );
   assert.equal(pack.name, "@spatius/server-sdk");
+  assert.equal(
+    pack.version,
+    JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version,
+  );
   for (const path of [
     "dist/index.js",
     "dist/index.cjs",
@@ -102,6 +120,28 @@ try {
     ),
   );
   assert.equal(installed.publishConfig.access, "public");
+  assert.equal(installed.version, pack.version);
+  if (destination) {
+    const directory = resolve(destination);
+    const bytes = readFileSync(join(temp, pack.filename));
+    assert.equal(integrity(bytes), pack.integrity);
+    mkdirSync(directory, { recursive: true });
+    copyFileSync(join(temp, pack.filename), join(directory, pack.filename));
+    writeFileSync(
+      join(directory, "release-artifact.json"),
+      JSON.stringify(
+        {
+          name: pack.name,
+          version: pack.version,
+          filename: pack.filename,
+          integrity: pack.integrity,
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+    await verifyArtifact(directory, pack.version);
+  }
   console.log(
     `Verified ${pack.filename}: ESM, CommonJS, both declaration formats, and package contents.`,
   );
