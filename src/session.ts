@@ -1,6 +1,8 @@
 import { randomBytes } from "node:crypto";
+import { setImmediate as yieldToEventLoop } from "node:timers/promises";
 import WebSocket, { type RawData } from "ws";
 import type { Span } from "@opentelemetry/api";
+import { OggOpusEncoder } from "./audio-encoder.js";
 import {
   normalizeConfig,
   type SessionConfig,
@@ -49,8 +51,15 @@ export class AvatarSession {
   private sessionStarted?: number;
   private requests = new Map<
     string,
-    { span?: Span; started: number; firstFrame: boolean }
+    {
+      span?: Span;
+      started: number;
+      firstFrame: boolean;
+      sentAudio: boolean;
+      encoder?: OggOpusEncoder;
+    }
   >();
+  private audioQueue: Promise<unknown> = Promise.resolve();
   private closePromise?: Promise<void>;
   private closeNotified = false;
   private cancelStart?: () => void;
@@ -308,13 +317,14 @@ export class AvatarSession {
     }
   }
 
-  /** Consecutive chunks share an ID until end=true; Ogg Opus must be a continuous stream. */
+  /** Consecutive chunks share an ID until end=true. Await sends for backpressure; do not mutate audio until resolved. */
   async sendAudio(audio: Uint8Array, end = false): Promise<string> {
     this.requireOpen();
+    if (this.config.oggOpusEncoder && audio.length % 2)
+      throw new TypeError("PCM input must be 16-bit aligned");
     const reqId = this.currentReqId ?? generateLogId();
     this.lastReqId = reqId;
     this.currentReqId = end ? undefined : reqId;
-    let propagated: Record<string, string> | undefined;
     if (!this.requests.has(reqId)) {
       const span = startSpan("driven.request", {
         ...this.attributes(),
@@ -324,23 +334,89 @@ export class AvatarSession {
         span,
         started: performance.now(),
         firstFrame: true,
+        sentAudio: false,
       });
-      propagated = traceContext(span);
     }
-    await this.send(
-      {
-        type: 3,
-        clientAudioInput: {
+    const request = this.requests.get(reqId)!;
+    return this.enqueueAudio(async () => {
+      const requireActive = () => {
+        this.requireOpen();
+        if (this.requests.get(reqId) !== request)
+          throw new Error("Audio request has already finished");
+      };
+      const transmit = async (payload: Uint8Array, final: boolean) => {
+        requireActive();
+        const propagated = !request.sentAudio
+          ? traceContext(request.span)
+          : undefined;
+        await this.send(
+          {
+            type: 3,
+            clientAudioInput: {
+              reqId,
+              audio: payload,
+              end: final,
+              ...(propagated?.traceparent ? { traceContext: propagated } : {}),
+            },
+          },
           reqId,
-          audio,
-          end,
-          ...(propagated?.traceparent ? { traceContext: propagated } : {}),
-        },
-      },
-      reqId,
-    );
-    if (end) this.requests.get(reqId)?.span?.addEvent("audio.input.complete");
-    return reqId;
+        );
+        request.sentAudio = true;
+      };
+      try {
+        requireActive();
+        if (this.config.oggOpusEncoder) {
+          if (!request.encoder) {
+            const encoder = await OggOpusEncoder.create(
+              this.config.sampleRate,
+              this.config.bitrate,
+              this.config.oggOpusEncoder,
+              !!this.config.onEncodedAudio,
+            );
+            // close() or a server error can arrive while the WASM asset is loading.
+            try {
+              requireActive();
+            } catch (error) {
+              encoder.destroy();
+              throw error;
+            }
+            request.encoder = encoder;
+          }
+          let pages = 0;
+          for (const page of request.encoder.encode(audio, end)) {
+            await transmit(page, false);
+            // ws callbacks can run as microtasks. Let timers, input and close events run.
+            if (++pages % 16 === 0) await yieldToEventLoop();
+          }
+          if (end) {
+            const completed = request.encoder.completedStream();
+            request.encoder.destroy();
+            request.encoder = undefined;
+            await transmit(Buffer.alloc(0), true);
+            if (completed) {
+              try {
+                this.config.onEncodedAudio?.(reqId, completed);
+              } catch {
+                /* Isolate application callbacks. */
+              }
+            }
+          }
+        } else {
+          await transmit(audio, end);
+        }
+        if (end) request.span?.addEvent("audio.input.complete");
+        return reqId;
+      } catch (error) {
+        this.finishRequest(reqId, error);
+        throw error;
+      }
+    });
+  }
+
+  private enqueueAudio<T>(operation: () => Promise<T>): Promise<T> {
+    const pending = this.audioQueue.then(operation);
+    this.audioQueue = pending.catch(() => {});
+    return pending;
   }
 
   /** Interrupt the most recent request, including after its final audio chunk. Egress only. */
@@ -351,15 +427,20 @@ export class AvatarSession {
     const reqId = this.lastReqId;
     if (!reqId) throw new Error("No request to interrupt");
     this.currentReqId = undefined;
-    await this.send({ type: 7, clientInterrupt: { reqId } }, reqId);
+    // Cancel buffered / queued encoding immediately; order the interrupt before new requests.
     this.finishRequest(reqId);
-    return reqId;
+    return this.enqueueAudio(async () => {
+      this.requireOpen();
+      await this.send({ type: 7, clientInterrupt: { reqId } }, reqId);
+      return reqId;
+    });
   }
 
   close(): Promise<void> {
     if (this.closePromise) return this.closePromise;
     if (this.state === "closed") return Promise.resolve();
     this.state = "closing";
+    for (const reqId of this.requests.keys()) this.finishRequest(reqId);
     this.closePromise = new Promise<void>((resolve) => {
       const ws = this.socket;
       if (!ws || ws.readyState === WebSocket.CLOSED) {
@@ -456,6 +537,9 @@ export class AvatarSession {
   private finishRequest(reqId: string, error?: unknown): void {
     const request = this.requests.get(reqId);
     if (!request) return;
+    request.encoder?.destroy();
+    request.encoder = undefined;
+    if (this.currentReqId === reqId) this.currentReqId = undefined;
     finishSpan(request.span, error);
     recordDuration(
       "avatar.request.duration",

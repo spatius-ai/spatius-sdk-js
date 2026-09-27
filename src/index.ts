@@ -4,6 +4,7 @@ export {
   type SessionConfig,
   type LiveKitEgressConfig,
   type AgoraEgressConfig,
+  type OggOpusEncoderConfig,
 } from "./config.js";
 export {
   AvatarSDKError,

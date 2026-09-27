@@ -26,6 +26,10 @@ try {
     "dist/index.cjs",
     "dist/index.d.ts",
     "dist/index.d.cts",
+    "dist/opus.wasm",
+    "dist/LICENSE.opus",
+    "dist/LICENSE.emscripten",
+    "dist/LICENSE.musl",
     "LICENSE",
     "README.md",
     "proto/message.proto",
@@ -61,6 +65,15 @@ try {
     const session = sdk.newAvatarSession({ apiKey: 'key', appId: 'app', avatarId: 'avatar', region: 'us-west' });
     if (session.config.sampleRate !== 16000 || !(session instanceof sdk.AvatarSession)) throw new Error('Invalid SDK export');
     if (!session.config.ingressEndpointUrl.includes('api.us-west.spatius.ai')) throw new Error('Invalid endpoint');
+    (async () => {
+      let completed;
+      const encoded = sdk.newAvatarSession({ apiKey: 'key', appId: 'app', avatarId: 'avatar', audioFormat: 'ogg_opus', oggOpusEncoder: {}, onEncodedAudio: (_, bytes) => { completed = Buffer.from(bytes); } });
+      // Exercise the installed ESM/CJS asset loader and session integration without network access.
+      encoded.state = 'open';
+      encoded.socket = { readyState: 1, send: (_, callback) => callback() };
+      await encoded.sendAudio(Buffer.alloc(640), true);
+      if (!completed || completed.toString('ascii', 0, 4) !== 'OggS' || !completed.includes(Buffer.from('OpusHead'))) throw new Error('Packaged encoder failed');
+    })().catch(error => { console.error(error); process.exitCode = 1; });
   `;
   for (const [filename, prefix] of [
     ["consumer.mjs", "import * as sdk from '@spatius/server-sdk';"],

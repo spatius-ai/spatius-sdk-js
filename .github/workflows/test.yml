@@ -27,3 +27,19 @@ jobs:
       - run: npm run proto:generate
       - run: git diff --exit-code -- src/proto.json
       - run: npm run test:package
+
+  codec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: bash scripts/build-opus.sh
+      - run: git diff --exit-code -- src/opus.wasm codec/
+      - run: npm test
+        env:
+          REQUIRE_FFMPEG: "1"
