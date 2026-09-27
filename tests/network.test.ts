@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test, after } from "node:test";
 import nock from "nock";
 import { normalizeConfig } from "../src/config.js";
@@ -80,10 +81,13 @@ test("defaults, regional domains, endpoint overrides, and one-hour expiry", asyn
 });
 
 test("bootstrap failure fallback, success cache, stale fallback, and invalid regions", async (t) => {
+  const { version } = JSON.parse(
+    readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+  );
   const first = nock("https://global.spatialwalk.top")
     .post("/bootstrap", {
       app_id: "app",
-      sdk_version: "0.1.0",
+      sdk_version: version,
       region: "auto",
       platform: "node",
     })

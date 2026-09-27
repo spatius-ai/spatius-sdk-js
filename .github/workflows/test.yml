@@ -23,6 +23,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run format:check
+      - name: Exercise checks and packaging after a release version change
+        run: npm version 0.0.0-ci.0 --no-git-tag-version --ignore-scripts
       - run: npm run check
       - run: npm run proto:generate
       - run: git diff --exit-code -- src/proto.json
