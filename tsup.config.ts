@@ -8,7 +8,11 @@ export default defineConfig({
   clean: true,
   shims: true,
   sourcemap: true,
-  dts: { banner: '/// <reference lib="esnext.disposable" />' },
+  dts: {
+    banner: '/// <reference lib="esnext.disposable" />',
+    // tsup injects baseUrl into declaration builds; TypeScript 6 deprecates it.
+    compilerOptions: { ignoreDeprecations: "6.0" },
+  },
   async onSuccess() {
     await copyFile("src/opus.wasm", "dist/opus.wasm");
     for (const name of ["opus", "emscripten", "musl"])
