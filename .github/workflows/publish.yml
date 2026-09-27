@@ -77,7 +77,7 @@ jobs:
       # Recheck on job reruns; never retry publishing an existing npm version.
       - name: Recheck release eligibility
         run: node scripts/prepare-release.mjs
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           artifact-ids: ${{ needs.build.outputs.artifact_id }}
           path: ${{ runner.temp }}/release
