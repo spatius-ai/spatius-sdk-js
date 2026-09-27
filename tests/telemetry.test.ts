@@ -65,6 +65,30 @@ test("private telemetry exports locally and propagates W3C context only on each 
     audio[0].traceContext.traceparent,
     audio[2].traceContext.traceparent,
   );
+  const encoded = newAvatarSession({
+    ...backend.config,
+    audioFormat: "ogg_opus",
+    oggOpusEncoder: {},
+  });
+  t.after(() => encoded.close());
+  await encoded.init();
+  await encoded.start();
+  const reqId = await encoded.sendAudio(Buffer.alloc(2));
+  await encoded.sendAudio(Buffer.alloc(638), true);
+  await waitFor(() =>
+    backend.messages.some(
+      (m) => m.clientAudioInput?.reqId === reqId && m.clientAudioInput.end,
+    ),
+  );
+  const encodedMessages = backend.messages
+    .filter((m) => m.clientAudioInput?.reqId === reqId)
+    .map((m) => m.clientAudioInput);
+  assert.match(
+    encodedMessages[0].traceContext.traceparent,
+    /^00-[a-f0-9]{32}-[a-f0-9]{16}-01$/,
+  );
+  assert.ok(encodedMessages.slice(1).every((m) => !m.traceContext));
+  await encoded.close();
   assert.throws(() => configureTelemetry(""), /shutdownTelemetry/);
   assert.equal(trace.getTracerProvider(), provider);
   await session.close();
