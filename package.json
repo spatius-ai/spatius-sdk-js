@@ -68,7 +68,7 @@
   "devDependencies": {
     "@types/node": "^24.0.0",
     "@types/ws": "^8.18.1",
-    "nock": "^14.0.17",
+    "nock": "^15.0.0",
     "prettier": "^3.9.9",
     "protobufjs-cli": "^2.7.0",
     "tsup": "^8.5.1",
