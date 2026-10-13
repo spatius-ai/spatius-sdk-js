@@ -58,7 +58,7 @@
   "dependencies": {
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/core": "^2.11.0",
-    "@opentelemetry/otlp-transformer": "0.222.0",
+    "@opentelemetry/otlp-transformer": "0.223.0",
     "@opentelemetry/resources": "^2.11.0",
     "@opentelemetry/sdk-metrics": "^2.11.0",
     "@opentelemetry/sdk-trace-base": "^2.11.0",
@@ -68,7 +68,7 @@
   "devDependencies": {
     "@types/node": "^24.0.0",
     "@types/ws": "^8.18.1",
-    "nock": "^14.0.17",
+    "nock": "^15.0.0",
     "prettier": "^3.9.9",
     "protobufjs-cli": "^2.7.0",
     "tsup": "^8.5.1",
