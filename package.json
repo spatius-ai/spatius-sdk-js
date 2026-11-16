@@ -57,10 +57,10 @@
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.1",
-    "@opentelemetry/core": "^2.11.0",
+    "@opentelemetry/core": "^3.0.0",
     "@opentelemetry/otlp-transformer": "0.223.0",
-    "@opentelemetry/resources": "^2.11.0",
-    "@opentelemetry/sdk-metrics": "^2.11.0",
+    "@opentelemetry/resources": "^3.0.0",
+    "@opentelemetry/sdk-metrics": "^3.0.0",
     "@opentelemetry/sdk-trace-base": "^2.11.0",
     "protobufjs": "^8.8.0",
     "ws": "^8.22.0"
